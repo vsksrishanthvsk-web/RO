@@ -53,9 +53,17 @@
     <!-- Timeline Progress -->
     <div class="timeline">
       {% with s=order.status %}
-      <div class="timeline-progress-bar" id="timeline-bar"
-        style="width: {% if s == 'PENDING' %}10%{% elif s == 'PREPARING' %}40%{% elif s == 'READY' %}70%{% elif s == 'SERVED' %}95%{% else %}0%{% endif %};">
-      </div>
+      {% if s == 'PENDING' %}
+        <div class="timeline-progress-bar" id="timeline-bar" style="width: 10%;"></div>
+      {% elif s == 'PREPARING' %}
+        <div class="timeline-progress-bar" id="timeline-bar" style="width: 40%;"></div>
+      {% elif s == 'READY' %}
+        <div class="timeline-progress-bar" id="timeline-bar" style="width: 70%;"></div>
+      {% elif s == 'SERVED' %}
+        <div class="timeline-progress-bar" id="timeline-bar" style="width: 95%;"></div>
+      {% else %}
+        <div class="timeline-progress-bar" id="timeline-bar" style="width: 0%;"></div>
+      {% endif %}
 
       <!-- Step 1: Received -->
       <div
