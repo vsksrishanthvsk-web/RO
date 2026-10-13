@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Kitchen Display System (KDS) — Rasoi Restaurant{% endblock %}
+
+{% block content %}
+<div class="container js-kitchen-screen">
+  <div class="kitchen-header">
+    <div>
+      <h1 class="page-title" style="margin-bottom: 0.25rem;">Kitchen Display (KDS)</h1>
+      <p class="page-subtitle">Real-time tickets feed for chefs and kitchen staff · Auto-refreshes</p>
+    </div>
+
+    <!-- Stats summary -->
+    <div class="stat-pills">
+      <div class="stat-pill">
+        <span style="color: var(--muted);">Active:</span>
+        <strong>{{ total_active }}</strong>
+      </div>
+      <div class="stat-pill" style="border-color: rgba(234, 179, 8, 0.4);">
+        <span style="color: #eab308;">● Received:</span>
+        <strong>{{ pending_count }}</strong>
+      </div>
+      <div class="stat-pill" style="border-color: rgba(249, 115, 22, 0.4);">
+        <span style="color: var(--primary);">● Preparing:</span>
+        <strong>{{ preparing_count }}</strong>
+      </div>
+      <div class="stat-pill" style="border-color: rgba(34, 197, 94, 0.4);">
+        <span style="color: #22c55e;">● Ready:</span>
+        <strong>{{ ready_count }}</strong>
+      </div>
+    </div>
+  </div>
+
+  {% if active_orders %}
+    <div class="kds-grid">
+      {% for order in active_orders %}
+        <div class="ticket-card">
+          <!-- Status color bar -->
+          <div class="ticket-status-bar {% if order.status == 'PENDING' %}pending{% elif order.status == 'PREPARING' %}preparing{% elif order.status == 'READY' %}ready{% endif %}"></div>
+
+          <div class="ticket-header">
+            <div>
+              <span style="font-size: 1.25rem; font-weight: 800; color: var(--foreground); display: block;">
+                {{ order.table_number }}
+              </span>
+              <span style="font-family: monospace; font-size: 0.85rem; color: var(--primary); font-weight: 700;">
+                {{ order.order_code }}
+              </span>
+            </div>
+            <div style="text-align: right;">
+              <span style="font-size: 0.8rem; color: var(--muted); display: block;">Received</span>
+              <span style="font-size: 0.9rem; font-weight: 600;">{{ order.created_at|time:"h:i A" }}</span>
+            </div>
+          </div>
+
+          <!-- Items list -->
+          <div class="ticket-items-list">
+            {% if order.customer_name and order.customer_name != 'Guest' %}
+              <div style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;">
+                Guest: <strong style="color: var(--foreground);">{{ order.customer_name }}</strong>
+              </div>
+            {% endif %}
+
+            {% if order.customer_notes %}
+              <div style="margin-bottom: 0.75rem; padding: 0.5rem 0.75rem; background: rgba(234, 179, 8, 0.12); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: var(--radius-sm); font-size: 0.82rem; color: #fde047;">
+                <strong>Note:</strong> {{ order.customer_notes }}
+              </div>
+            {% endif %}
+
+            <div style="margin-top: 0.5rem;">
+              {% for item in order.items.all %}
+                <div class="ticket-item">
+                  <span style="font-weight: 600;">
+                    <span style="display:inline-block; width: 24px; color: var(--primary); font-weight: 800;">
+                      {{ item.quantity }}x
+                    </span>
+                    {{ item.item_name }}
+                  </span>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Action buttons to advance status -->
+          <div class="ticket-footer">
+            {% if order.status == 'PENDING' %}
+              <button type="button" 
+                      class="btn-primary js-status-btn" 
+                      data-order-code="{{ order.order_code }}" 
+                      data-status="PREPARING"
+                      style="background: #d97706;">
+                ▶ Start Preparing
+              </button>
+            {% elif order.status == 'PREPARING' %}
+              <button type="button" 
+                      class="btn-primary js-status-btn" 
+                      data-order-code="{{ order.order_code }}" 
+                      data-status="READY"
+                      style="background: #16a34a;">
+                ✓ Mark Ready to Serve
+              </button>
+            {% elif order.status == 'READY' %}
+              <button type="button" 
+                      class="btn-primary js-status-btn" 
+                      data-order-code="{{ order.order_code }}" 
+                      data-status="SERVED"
+                      style="background: #2563eb;">
+                ★ Complete / Served
+              </button>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div style="text-align: center; padding: 6rem 1rem; background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius-lg); margin-bottom: 3rem;">
+      <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">No active orders in the kitchen</h2>
+      <p style="color: var(--muted);">The kitchen queue is clear! New table orders will appear here automatically.</p>
+    </div>
+  {% endif %}
+
+  <!-- Recently Served Orders -->
+  {% if recent_served %}
+    <div style="margin-top: 3rem; margin-bottom: 4rem;">
+      <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; color: var(--muted);">Recently Completed / Served</h2>
+      <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem;">
+        {% for order in recent_served %}
+          <div style="background: var(--bg-secondary); border: 1px solid var(--card-border); border-radius: var(--radius-md); padding: 1rem;">
+            <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
+              <strong>{{ order.table_number }}</strong>
+              <span style="font-family: monospace; color: var(--muted);">{{ order.order_code }}</span>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--muted);">
+              {{ order.items.count }} items · ₹{{ order.total }}
+            </div>
+            <div style="font-size: 0.75rem; color: #22c55e; margin-top: 0.5rem;">
+              ✓ Served at {{ order.updated_at|time:"h:i A" }}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

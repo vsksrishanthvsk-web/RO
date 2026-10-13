@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Track Order — Rasoi Restaurant{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header" style="text-align: center; max-width: 650px; margin: 3rem auto 2rem;">
+    <h1 class="page-title">Live Order Tracker</h1>
+    <p class="page-subtitle">Watch your order move in real-time from our tandoors and pans straight to your dining table.</p>
+
+    <!-- Code Lookup Form -->
+    <form method="GET" action="{% url 'orders:track' %}" style="display:flex; gap:0.5rem; margin-top: 1.5rem; justify-content:center;">
+      <input type="text" 
+             name="code" 
+             value="{{ search_code }}" 
+             placeholder="Enter Order Code (e.g. RSO-AB123)" 
+             class="form-input" 
+             style="max-width: 320px; text-transform: uppercase;"
+             required>
+      <button type="submit" class="btn-primary" style="width: auto; padding: 0.75rem 1.5rem;">
+        Track
+      </button>
+    </form>
+  </div>
+
+  {% if order %}
+    <div class="track-card js-order-tracker" data-order-code="{{ order.order_code }}">
+      <div class="track-header">
+        <div>
+          <span style="font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; display:block; margin-bottom: 0.25rem;">
+            Order Reference
+          </span>
+          <span class="track-code-pill">{{ order.order_code }}</span>
+          <span style="margin-left: 0.75rem; font-weight: 600; color: var(--foreground);">
+            {{ order.table_number }}
+          </span>
+        </div>
+        <div style="text-align: right;">
+          <span style="font-size: 0.8rem; color: var(--muted); display: block;">Placed at</span>
+          <span style="font-weight: 600;">{{ order.created_at|time:"h:i A" }}</span>
+        </div>
+      </div>
+
+      <!-- Current Status Banner -->
+      <div style="background: rgba(249, 115, 22, 0.08); border: 1px solid rgba(249, 115, 22, 0.25); border-radius: var(--radius-md); padding: 1rem 1.5rem; text-align: center; margin-bottom: 2rem;">
+        <span style="font-size: 0.85rem; color: var(--muted); display: block;">Current Status</span>
+        <h2 id="tracker-status-text" style="color: var(--primary); font-size: 1.6rem; font-weight: 700; margin-top: 0.2rem;">
+          {{ order.get_status_display }}
+        </h2>
+      </div>
+
+      <!-- Timeline Progress -->
+      <div class="timeline">
+        {% with s=order.status %}
+          <div class="timeline-progress-bar" id="timeline-bar" 
+               style="width: {% if s == 'PENDING' %}10%{% elif s == 'PREPARING' %}40%{% elif s == 'READY' %}70%{% elif s == 'SERVED' %}95%{% else %}0%{% endif %};">
+          </div>
+
+          <!-- Step 1: Received -->
+          <div class="timeline-step {% if s == 'PENDING' %}current{% elif s == 'PREPARING' or s == 'READY' or s == 'SERVED' %}completed{% endif %}">
+            <div class="step-node">1</div>
+            <span class="step-title">Order Received</span>
+          </div>
+
+          <!-- Step 2: Preparing -->
+          <div class="timeline-step {% if s == 'PREPARING' %}current{% elif s == 'READY' or s == 'SERVED' %}completed{% endif %}">
+            <div class="step-node">2</div>
+            <span class="step-title">In Kitchen</span>
+          </div>
+
+          <!-- Step 3: Ready -->
+          <div class="timeline-step {% if s == 'READY' %}current{% elif s == 'SERVED' %}completed{% endif %}">
+            <div class="step-node">3</div>
+            <span class="step-title">Ready to Serve</span>
+          </div>
+
+          <!-- Step 4: Served -->
+          <div class="timeline-step {% if s == 'SERVED' %}completed{% endif %}">
+            <div class="step-node">4</div>
+            <span class="step-title">Served</span>
+          </div>
+        {% endwith %}
+      </div>
+
+      <!-- Order Items Detail -->
+      <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 1.5rem; margin-top: 2rem;">
+        <h3 style="font-size: 1.15rem; font-weight: 600; margin-bottom: 1rem;">Items in this order</h3>
+        <div style="display:flex; flex-direction:column; gap: 0.75rem;">
+          {% for item in order.items.all %}
+            <div style="display:flex; justify-content:space-between; font-size: 0.95rem;">
+              <span><strong>{{ item.quantity }}x</strong> {{ item.item_name }}</span>
+              <span style="color: var(--muted);">₹{{ item.subtotal }}</span>
+            </div>
+          {% endfor %}
+        </div>
+
+        {% if order.customer_notes %}
+          <div style="margin-top: 1.25rem; padding: 0.75rem 1rem; background: var(--bg-secondary); border-radius: var(--radius-sm); font-size: 0.85rem; color: var(--muted);">
+            <strong style="color: var(--foreground);">Kitchen Notes:</strong> {{ order.customer_notes }}
+          </div>
+        {% endif %}
+
+        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.08); display:flex; justify-content:space-between; font-weight: 700;">
+          <span>Grand Total (incl. 3% tax)</span>
+          <span style="color: var(--primary); font-size: 1.2rem;">₹{{ order.total }}</span>
+        </div>
+      </div>
+    </div>
+  {% elif search_code %}
+    <div style="text-align: center; padding: 4rem 1rem; color: var(--muted);">
+      <p style="font-size: 1.1rem; margin-bottom: 1rem;">Order <strong>{{ search_code }}</strong> could not be found.</p>
+      <p style="font-size: 0.9rem;">Please check the code received upon checkout or place a new order.</p>
+    </div>
+  {% else %}
+    <div style="text-align: center; padding: 4rem 1rem; color: var(--muted);">
+      <p style="font-size: 1rem;">Enter your Order Reference code above to view live progress.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
